@@ -1,11 +1,22 @@
-pub struct Pos{
-    pub x: i8,
-    pub y: i8
+#[derive(Clone, Copy)]
+pub enum PieceType{
+    Pawn,
+    Rook,
+    Knight,
+    Bishop,
+    Queen,
+    King
 }
 
-pub struct Pawn {
+#[derive(Clone, Copy)]
+pub struct Pos{
+    pub x: u8,
+    pub y: u8
+}
+
+#[derive(Clone, Copy)]
+pub struct Piece {
     pub is_white: bool,
-    pub has_moved: bool,
-    pub pos: Pos
+    pub piece_type: PieceType
 }
 
