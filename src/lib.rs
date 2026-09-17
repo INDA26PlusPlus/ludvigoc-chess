@@ -8,13 +8,13 @@ pub enum PieceType {
     King,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Pos {
     pub x: u8,
     pub y: u8,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Piece {
     pub is_white: bool,
     pub piece_type: PieceType,
@@ -24,6 +24,15 @@ pub struct Piece {
 pub struct Board {
     pub squares: [Option<Piece>; 64],
     pub white_turn: bool,
+
+    pub white_king_moved: bool,
+    pub black_king_moved: bool,
+    pub white_rook_left_moved: bool,
+    pub white_rook_right_moved: bool,
+    pub black_rook_left_moved: bool,
+    pub black_rook_right_moved: bool,
+
+    pub en_passant: Option<Pos>,
 }
 
 impl Board {
@@ -31,6 +40,13 @@ impl Board {
         let mut board = Board {
             squares: [None; 64],
             white_turn: true,
+            white_king_moved: false,
+            black_king_moved: false,
+            white_rook_left_moved: false,
+            white_rook_right_moved: false,
+            black_rook_left_moved: false,
+            black_rook_right_moved: false,
+            en_passant: None,
         };
 
         // White pieces
@@ -210,6 +226,16 @@ impl Board {
             if target.is_white == piece.is_white {
                 return false;
             }
+            if target.piece_type == PieceType::King {
+                return false;
+            }
+        }
+
+        if piece.piece_type == PieceType::King
+            && (to.x as i8 - from.x as i8).abs() == 2
+            && from.y == to.y
+        {
+            return self.can_castle(from, to);
         }
 
         let dx = (to.x as i8 - from.x as i8).abs();
@@ -267,6 +293,211 @@ impl Board {
         !test_board.is_in_check(piece.is_white)
     }
 
+    pub fn make_move(
+        &mut self,
+        from: Pos,
+        to: Pos,
+        promotion: Option<PieceType>,
+    ) -> bool {
+        if !self.is_legal_move(from, to) {
+            return false;
+        }
+
+        let piece = match self.get(from) {
+            Some(piece) => piece,
+            None => return false,
+        };
+
+        let is_castling = piece.piece_type == PieceType::King
+            && (to.x as i8 - from.x as i8).abs() == 2;
+
+        self.move_piece(from, to);
+
+        // Mark the king as having moved
+        if piece.piece_type == PieceType::King {
+            if piece.is_white {
+                self.white_king_moved = true;
+            } else {
+                self.black_king_moved = true;
+            }
+        }
+
+        // Mark rooks as having moved
+        if piece.piece_type == PieceType::Rook {
+            if piece.is_white {
+                if from == (Pos { x: 0, y: 0 }) {
+                    self.white_rook_left_moved = true;
+                }
+
+                if from == (Pos { x: 7, y: 0 }) {
+                    self.white_rook_right_moved = true;
+                }
+            } else {
+                if from == (Pos { x: 0, y: 7 }) {
+                    self.black_rook_left_moved = true;
+                }
+
+                if from == (Pos { x: 7, y: 7 }) {
+                    self.black_rook_right_moved = true;
+                }
+            }
+        }
+
+        // Move the rook when castling
+        if is_castling {
+            let y = from.y;
+
+            if to.x == 6 {
+                self.move_piece(
+                    Pos { x: 7, y },
+                    Pos { x: 5, y },
+                );
+            } else if to.x == 2 {
+                self.move_piece(
+                    Pos { x: 0, y },
+                    Pos { x: 3, y },
+                );
+            }
+        }
+
+        // Promotion
+        if piece.piece_type == PieceType::Pawn && (to.y == 0 || to.y == 7) {
+            let new_type = match promotion {
+                Some(piece_type) => piece_type,
+                None => PieceType::Queen,
+            };
+
+            self.squares[(to.y * 8 + to.x) as usize] = Some(Piece {
+                is_white: piece.is_white,
+                piece_type: new_type,
+            });
+        }
+
+        self.white_turn = !self.white_turn;
+
+        true
+    }
+    fn can_castle(&self, from: Pos, to: Pos) -> bool {
+        let piece = match self.get(from) {
+            Some(piece) => piece,
+            None => return false,
+        };
+
+        if piece.piece_type != PieceType::King {
+            return false;
+        }
+
+        if self.is_in_check(piece.is_white) {
+            return false;
+        }
+
+        let y = if piece.is_white { 0 } else { 7 };
+
+        // Short castle
+        if from == (Pos { x: 4, y }) && to == (Pos { x: 6, y }) {
+            if piece.is_white && self.white_king_moved {
+                return false;
+            }
+
+            if !piece.is_white && self.black_king_moved {
+                return false;
+            }
+
+            if piece.is_white && self.white_rook_right_moved {
+                return false;
+            }
+
+            if !piece.is_white && self.black_rook_right_moved {
+                return false;
+            }
+
+            if self.get(Pos { x: 5, y }).is_some()
+                || self.get(Pos { x: 6, y }).is_some()
+            {
+                return false;
+            }
+
+            if self.get(Pos { x: 7, y })
+                != Some(Piece {
+                    is_white: piece.is_white,
+                    piece_type: PieceType::Rook,
+                })
+            {
+                return false;
+            }
+
+            if self.square_is_attacked(Pos { x: 5, y }, !piece.is_white)
+                || self.square_is_attacked(Pos { x: 6, y }, !piece.is_white)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        // Long castle
+        if from == (Pos { x: 4, y }) && to == (Pos { x: 2, y }) {
+            if piece.is_white && self.white_king_moved {
+                return false;
+            }
+
+            if !piece.is_white && self.black_king_moved {
+                return false;
+            }
+
+            if piece.is_white && self.white_rook_left_moved {
+                return false;
+            }
+
+            if !piece.is_white && self.black_rook_left_moved {
+                return false;
+            }
+
+            if self.get(Pos { x: 1, y }).is_some()
+                || self.get(Pos { x: 2, y }).is_some()
+                || self.get(Pos { x: 3, y }).is_some()
+            {
+                return false;
+            }
+
+            if self.get(Pos { x: 0, y })
+                != Some(Piece {
+                    is_white: piece.is_white,
+                    piece_type: PieceType::Rook,
+                })
+            {
+                return false;
+            }
+
+            if self.square_is_attacked(Pos { x: 3, y }, !piece.is_white)
+                || self.square_is_attacked(Pos { x: 2, y }, !piece.is_white)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        false
+    }
+
+    fn square_is_attacked(&self, pos: Pos, by_white: bool) -> bool {
+        for y in 0..8 {
+            for x in 0..8 {
+                let from = Pos { x, y };
+
+                if let Some(piece) = self.get(from) {
+                    if piece.is_white == by_white
+                        && self.attacks_square(from, pos)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
     fn path_is_clear(&self, from: Pos, to: Pos) -> bool {
         let dx = (to.x as i8 - from.x as i8).signum();
         let dy = (to.y as i8 - from.y as i8).signum();
@@ -371,5 +602,36 @@ mod tests {
 
         assert!(board.get(Pos { x: 4, y: 1 }).is_none());
         assert!(board.get(Pos { x: 4, y: 3 }).is_some());
+    }
+
+    #[test]
+    fn make_move_changes_turn() {
+        let mut board = Board::new();
+
+        let moved = board.make_move(Pos { x: 4, y: 1 }, Pos { x: 4, y: 3 }, None);
+
+        assert!(moved);
+        assert!(!board.white_turn);
+    }
+
+    #[test]
+    fn cannot_move_wrong_color() {
+        let board = Board::new();
+
+        assert!(!board.is_legal_move(Pos { x: 0, y: 6 }, Pos { x: 0, y: 5 },));
+    }
+
+    #[test]
+    fn knight_can_jump() {
+        let board = Board::new();
+
+        assert!(board.is_legal_move(Pos { x: 1, y: 0 }, Pos { x: 2, y: 2 },));
+    }
+
+    #[test]
+    fn cannot_move_through_piece() {
+        let board = Board::new();
+
+        assert!(!board.is_legal_move(Pos { x: 0, y: 0 }, Pos { x: 0, y: 3 },));
     }
 }
