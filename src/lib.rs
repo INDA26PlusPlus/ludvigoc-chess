@@ -200,7 +200,16 @@ impl Board {
         self.squares[index] = Some(piece);
     }
 
-    pub fn move_piece(&mut self, from: Pos, to: Pos) {
+    // Functions for getting information about the board state
+    pub fn white_to_move(&self) -> bool {
+        self.white_turn
+    }
+
+    pub fn piece_at(&self, pos: Pos) -> Option<Piece> {
+        self.get(pos)
+    }
+
+    fn move_piece(&mut self, from: Pos, to: Pos) {
         let piece = self.get(from);
 
         let from_index = (from.y * 8 + from.x) as usize;
@@ -598,8 +607,13 @@ mod tests {
     fn move_piece_works() {
         let mut board = Board::new();
 
-        board.move_piece(Pos { x: 4, y: 1 }, Pos { x: 4, y: 3 });
+        let moved = board.make_move(
+            Pos { x: 4, y: 1 },
+            Pos { x: 4, y: 3 },
+            None,
+        );
 
+        assert!(moved);
         assert!(board.get(Pos { x: 4, y: 1 }).is_none());
         assert!(board.get(Pos { x: 4, y: 3 }).is_some());
     }
