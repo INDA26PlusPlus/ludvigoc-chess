@@ -304,12 +304,7 @@ impl Board {
         !test_board.is_in_check(piece.is_white)
     }
 
-    pub fn make_move(
-        &mut self,
-        from: Pos,
-        to: Pos,
-        promotion: Option<PieceType>,
-    ) -> bool {
+    pub fn make_move(&mut self, from: Pos, to: Pos, promotion: Option<PieceType>) -> bool {
         if !self.is_legal_move(from, to) {
             return false;
         }
@@ -319,8 +314,30 @@ impl Board {
             None => return false,
         };
 
-        let is_castling = piece.piece_type == PieceType::King
-            && (to.x as i8 - from.x as i8).abs() == 2;
+        let is_castling =
+            piece.piece_type == PieceType::King && (to.x as i8 - from.x as i8).abs() == 2;
+
+        if let Some(captured) = self.at(to) {
+            if captured.piece_type == PieceType::Rook {
+                if captured.is_white {
+                    if to == (Pos { x: 0, y: 0 }) {
+                        self.white_rook_left_moved = true;
+                    }
+
+                    if to == (Pos { x: 7, y: 0 }) {
+                        self.white_rook_right_moved = true;
+                    }
+                } else {
+                    if to == (Pos { x: 0, y: 7 }) {
+                        self.black_rook_left_moved = true;
+                    }
+
+                    if to == (Pos { x: 7, y: 7 }) {
+                        self.black_rook_right_moved = true;
+                    }
+                }
+            }
+        }
 
         self.move_piece(from, to);
 
@@ -359,15 +376,9 @@ impl Board {
             let y = from.y;
 
             if to.x == 6 {
-                self.move_piece(
-                    Pos { x: 7, y },
-                    Pos { x: 5, y },
-                );
+                self.move_piece(Pos { x: 7, y }, Pos { x: 5, y });
             } else if to.x == 2 {
-                self.move_piece(
-                    Pos { x: 0, y },
-                    Pos { x: 3, y },
-                );
+                self.move_piece(Pos { x: 0, y }, Pos { x: 3, y });
             }
         }
 
@@ -425,9 +436,7 @@ impl Board {
                 return false;
             }
 
-            if self.at(Pos { x: 5, y }).is_some()
-                || self.at(Pos { x: 6, y }).is_some()
-            {
+            if self.at(Pos { x: 5, y }).is_some() || self.at(Pos { x: 6, y }).is_some() {
                 return false;
             }
 
@@ -501,9 +510,7 @@ impl Board {
                 let from = Pos { x, y };
 
                 if let Some(piece) = self.at(from) {
-                    if piece.is_white == by_white
-                        && self.attacks_square(from, pos)
-                    {
+                    if piece.is_white == by_white && self.attacks_square(from, pos) {
                         return true;
                     }
                 }
@@ -612,11 +619,7 @@ mod tests {
     fn move_piece_works() {
         let mut board = Board::new();
 
-        let moved = board.make_move(
-            Pos { x: 4, y: 1 },
-            Pos { x: 4, y: 3 },
-            None,
-        );
+        let moved = board.make_move(Pos { x: 4, y: 1 }, Pos { x: 4, y: 3 }, None);
 
         assert!(moved);
         assert!(board.at(Pos { x: 4, y: 1 }).is_none());
