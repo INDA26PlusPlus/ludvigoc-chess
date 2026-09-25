@@ -50,56 +50,56 @@ impl Board {
         };
 
         // White pieces
-        board.set(
+        board.place(
             Pos { x: 0, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::Rook,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 1, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::Knight,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 2, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::Bishop,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 3, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::Queen,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 4, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::King,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 5, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::Bishop,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 6, y: 0 },
             Piece {
                 is_white: true,
                 piece_type: PieceType::Knight,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 7, y: 0 },
             Piece {
                 is_white: true,
@@ -109,7 +109,7 @@ impl Board {
 
         // White pawns
         for x in 0..8 {
-            board.set(
+            board.place(
                 Pos { x, y: 1 },
                 Piece {
                     is_white: true,
@@ -119,56 +119,56 @@ impl Board {
         }
 
         // Black pieces
-        board.set(
+        board.place(
             Pos { x: 0, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::Rook,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 1, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::Knight,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 2, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::Bishop,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 3, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::Queen,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 4, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::King,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 5, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::Bishop,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 6, y: 7 },
             Piece {
                 is_white: false,
                 piece_type: PieceType::Knight,
             },
         );
-        board.set(
+        board.place(
             Pos { x: 7, y: 7 },
             Piece {
                 is_white: false,
@@ -178,7 +178,7 @@ impl Board {
 
         // Black pawns
         for x in 0..8 {
-            board.set(
+            board.place(
                 Pos { x, y: 6 },
                 Piece {
                     is_white: false,
@@ -187,15 +187,21 @@ impl Board {
             );
         }
 
-        board // Return the board with pieces set up
+        board // Return the board with pieces placed
     }
 
-    pub fn get(&self, pos: Pos) -> Option<Piece> {
+    pub fn at(&self, pos: Pos) -> Option<Piece> {
+        if pos.x >= 8 || pos.y >= 8 {
+            return None;
+        }
         let index = (pos.y * 8 + pos.x) as usize;
         self.squares[index]
     }
 
-    pub fn set(&mut self, pos: Pos, piece: Piece) {
+    pub fn place(&mut self, pos: Pos, piece: Piece) {
+        if pos.x >= 8 || pos.y >= 8 {
+            return;
+        }
         let index = (pos.y * 8 + pos.x) as usize;
         self.squares[index] = Some(piece);
     }
@@ -205,12 +211,8 @@ impl Board {
         self.white_turn
     }
 
-    pub fn piece_at(&self, pos: Pos) -> Option<Piece> {
-        self.get(pos)
-    }
-
     fn move_piece(&mut self, from: Pos, to: Pos) {
-        let piece = self.get(from);
+        let piece = self.at(from);
 
         let from_index = (from.y * 8 + from.x) as usize;
         let to_index = (to.y * 8 + to.x) as usize;
@@ -220,7 +222,7 @@ impl Board {
     }
 
     pub fn is_legal_move(&self, from: Pos, to: Pos) -> bool {
-        let piece = match self.get(from) {
+        let piece = match self.at(from) {
             Some(piece) => piece,
             None => return false,
         };
@@ -231,7 +233,7 @@ impl Board {
         }
 
         // You cannot capture your own pieces
-        if let Some(target) = self.get(to) {
+        if let Some(target) = self.at(to) {
             if target.is_white == piece.is_white {
                 return false;
             }
@@ -267,20 +269,20 @@ impl Board {
                 let move_y = to.y as i8 - from.y as i8;
 
                 if dx == 0 && move_y == direction {
-                    self.get(to).is_none()
+                    self.at(to).is_none()
                 } else if dx == 0 && move_y == direction * 2 {
                     let middle_y = (from.y as i8 + direction) as u8;
 
                     from.y == if piece.is_white { 1 } else { 6 }
-                        && self.get(to).is_none()
+                        && self.at(to).is_none()
                         && self
-                            .get(Pos {
+                            .at(Pos {
                                 x: from.x,
                                 y: middle_y,
                             })
                             .is_none()
                 } else if dx == 1 && move_y == direction {
-                    match self.get(to) {
+                    match self.at(to) {
                         Some(target) => target.is_white != piece.is_white,
                         None => false,
                     }
@@ -312,7 +314,7 @@ impl Board {
             return false;
         }
 
-        let piece = match self.get(from) {
+        let piece = match self.at(from) {
             Some(piece) => piece,
             None => return false,
         };
@@ -372,8 +374,11 @@ impl Board {
         // Promotion
         if piece.piece_type == PieceType::Pawn && (to.y == 0 || to.y == 7) {
             let new_type = match promotion {
-                Some(piece_type) => piece_type,
-                None => PieceType::Queen,
+                Some(PieceType::Queen) => PieceType::Queen,
+                Some(PieceType::Rook) => PieceType::Rook,
+                Some(PieceType::Bishop) => PieceType::Bishop,
+                Some(PieceType::Knight) => PieceType::Knight,
+                _ => PieceType::Queen,
             };
 
             self.squares[(to.y * 8 + to.x) as usize] = Some(Piece {
@@ -387,7 +392,7 @@ impl Board {
         true
     }
     fn can_castle(&self, from: Pos, to: Pos) -> bool {
-        let piece = match self.get(from) {
+        let piece = match self.at(from) {
             Some(piece) => piece,
             None => return false,
         };
@@ -420,13 +425,13 @@ impl Board {
                 return false;
             }
 
-            if self.get(Pos { x: 5, y }).is_some()
-                || self.get(Pos { x: 6, y }).is_some()
+            if self.at(Pos { x: 5, y }).is_some()
+                || self.at(Pos { x: 6, y }).is_some()
             {
                 return false;
             }
 
-            if self.get(Pos { x: 7, y })
+            if self.at(Pos { x: 7, y })
                 != Some(Piece {
                     is_white: piece.is_white,
                     piece_type: PieceType::Rook,
@@ -462,14 +467,14 @@ impl Board {
                 return false;
             }
 
-            if self.get(Pos { x: 1, y }).is_some()
-                || self.get(Pos { x: 2, y }).is_some()
-                || self.get(Pos { x: 3, y }).is_some()
+            if self.at(Pos { x: 1, y }).is_some()
+                || self.at(Pos { x: 2, y }).is_some()
+                || self.at(Pos { x: 3, y }).is_some()
             {
                 return false;
             }
 
-            if self.get(Pos { x: 0, y })
+            if self.at(Pos { x: 0, y })
                 != Some(Piece {
                     is_white: piece.is_white,
                     piece_type: PieceType::Rook,
@@ -495,7 +500,7 @@ impl Board {
             for x in 0..8 {
                 let from = Pos { x, y };
 
-                if let Some(piece) = self.get(from) {
+                if let Some(piece) = self.at(from) {
                     if piece.is_white == by_white
                         && self.attacks_square(from, pos)
                     {
@@ -516,7 +521,7 @@ impl Board {
 
         while x != to.x as i8 || y != to.y as i8 {
             if self
-                .get(Pos {
+                .at(Pos {
                     x: x as u8,
                     y: y as u8,
                 })
@@ -539,7 +544,7 @@ impl Board {
             for x in 0..8 {
                 let pos = Pos { x, y };
 
-                if let Some(piece) = self.get(pos) {
+                if let Some(piece) = self.at(pos) {
                     if piece.is_white == white && piece.piece_type == PieceType::King {
                         king_position = Some(pos);
                     }
@@ -556,7 +561,7 @@ impl Board {
             for x in 0..8 {
                 let from = Pos { x, y };
 
-                if let Some(piece) = self.get(from) {
+                if let Some(piece) = self.at(from) {
                     if piece.is_white != white {
                         if self.attacks_square(from, king_position) {
                             return true;
@@ -570,7 +575,7 @@ impl Board {
     }
 
     fn attacks_square(&self, from: Pos, to: Pos) -> bool {
-        let piece = match self.get(from) {
+        let piece = match self.at(from) {
             Some(piece) => piece,
             None => return false,
         };
@@ -614,8 +619,8 @@ mod tests {
         );
 
         assert!(moved);
-        assert!(board.get(Pos { x: 4, y: 1 }).is_none());
-        assert!(board.get(Pos { x: 4, y: 3 }).is_some());
+        assert!(board.at(Pos { x: 4, y: 1 }).is_none());
+        assert!(board.at(Pos { x: 4, y: 3 }).is_some());
     }
 
     #[test]
