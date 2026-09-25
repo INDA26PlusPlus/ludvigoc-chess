@@ -1,3 +1,4 @@
+/// The type of a piece, for example a pawn or a rook.
 #[derive(Clone, Copy, PartialEq)]
 pub enum PieceType {
     Pawn,
@@ -8,34 +9,51 @@ pub enum PieceType {
     King,
 }
 
+/// A chess board position represented by x and y coordinates, (0, 0) being the bottom left corner.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Pos {
+    /// The x coordinate of the position from 0 to 7.
     pub x: u8,
+    /// The y coordinate of the position from 0 to 7.
     pub y: u8,
 }
 
+/// A chess piece, which has a color and a type.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Piece {
+    /// if the piece is white or black.
     pub is_white: bool,
+    /// The type of the piece.
     pub piece_type: PieceType,
 }
 
+/// The chess board containing squares that might contain pieces and information about the game state.
 #[derive(Clone)]
 pub struct Board {
+    /// The squares of the board, where each square can be empty or contain a piece.
     pub squares: [Option<Piece>; 64],
+    /// Whether it is white's turn to move.
     pub white_turn: bool,
 
+    /// Whether the white king has moved.
     pub white_king_moved: bool,
+    /// Whether the black king has moved.
     pub black_king_moved: bool,
+    /// Whether the white left rook has moved.
     pub white_rook_left_moved: bool,
+    /// Whether the white right rook has moved.
     pub white_rook_right_moved: bool,
+    /// Whether the black left rook has moved.
     pub black_rook_left_moved: bool,
+    /// Whether the black right rook has moved.
     pub black_rook_right_moved: bool,
 
+    /// en passant unused.
     pub en_passant: Option<Pos>,
 }
 
 impl Board {
+    /// creates a new chess board with pieces in their starting positions.
     pub fn new() -> Board {
         let mut board = Board {
             squares: [None; 64],
@@ -190,6 +208,7 @@ impl Board {
         board // Return the board with pieces placed
     }
 
+    /// returns the piece at the given position, or None if the position is empty or out of bounds.
     pub fn at(&self, pos: Pos) -> Option<Piece> {
         if pos.x >= 8 || pos.y >= 8 {
             return None;
@@ -198,6 +217,7 @@ impl Board {
         self.squares[index]
     }
 
+    /// places a piece at the given position on the board. If the position is out of bounds, it does nothing.
     pub fn place(&mut self, pos: Pos, piece: Piece) {
         if pos.x >= 8 || pos.y >= 8 {
             return;
@@ -206,7 +226,7 @@ impl Board {
         self.squares[index] = Some(piece);
     }
 
-    // Functions for getting information about the board state
+    /// returns true if it is the white player's turn, false otherwise.
     pub fn white_to_move(&self) -> bool {
         self.white_turn
     }
@@ -221,6 +241,7 @@ impl Board {
         self.squares[to_index] = piece;
     }
 
+    /// checks if a move is allowed according to the chess rules, if the move is not allowed it returns false.
     pub fn is_legal_move(&self, from: Pos, to: Pos) -> bool {
         let piece = match self.at(from) {
             Some(piece) => piece,
@@ -304,6 +325,7 @@ impl Board {
         !test_board.is_in_check(piece.is_white)
     }
 
+    /// executes a move on the board if it is legal, returning true if the move was made and false otherwise.
     pub fn make_move(&mut self, from: Pos, to: Pos, promotion: Option<PieceType>) -> bool {
         if !self.is_legal_move(from, to) {
             return false;
@@ -402,6 +424,8 @@ impl Board {
 
         true
     }
+
+    /// checks if a king can castle with the rook at the given position
     fn can_castle(&self, from: Pos, to: Pos) -> bool {
         let piece = match self.at(from) {
             Some(piece) => piece,
